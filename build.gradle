@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+}
+
+group = 'org.game'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    //사운드를 넣기 위한 jlayer 라이브러리 종속성 추가
+    // https://mvnrepository.com/artifact/javazoom/jlayer
+    implementation group: 'javazoom', name: 'jlayer', version: '1.0.1'
+
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -1,0 +1,82 @@
+ImageIcon backgroundImg;
+    ImageIcon monster;
+
+    float alpha = 0.7f; // 원하는 초기 투명도 값 설정 (클래스 변수로 변경)
+
+    public MainMenuPanel(MainFrame mainFrame) {
+
+
+        this.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                distance(e.getX(), e.getY());
+            }
+        });
+
+
+
+        backgroundImg = new ImageIcon("src/main/java/img/배경화면.jpg");
+        monster = new ImageIcon("src/main/java/img/큰몬스터.png");
+
+        this.setLayout(new BorderLayout());
+
+        JLabel titleLabel = new JLabel("바퀴벌레 서바이벌!");
+        titleLabel.setHorizontalAlignment(JLabel.CENTER);
+        titleLabel.setFont(new Font("", Font.BOLD, 24));
+        titleLabel.setForeground(Color.WHITE);
+        this.add(titleLabel, BorderLayout.NORTH);
+
+        JButton startButton = new JButton("게임 시작");
+        // 버튼의 크기를 조절
+        startButton.setPreferredSize(new Dimension(150, 50));
+
+        startButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mainFrame.startGame();
+            }
+        });
+
+        // BorderLayout.CENTER에 추가하기 전에 먼저 패널에 레이아웃을 설정
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setOpaque(false); // 버튼 패널의 배경을 투명하게
+        buttonPanel.add(startButton);
+
+        this.add(buttonPanel, BorderLayout.CENTER);
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.drawImage(backgroundImg.getImage(), 0, 0, null);
+
+        drawMonster(alpha, g);
+    }
+
+    public void drawMonster(float alpha, Graphics g){
+        Graphics2D g2d = (Graphics2D) g.create();
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        g2d.drawImage(monster.getImage(), this.getWidth()/2-60, 100, null);
+        g2d.dispose(); // 그래픽 객체를 해제
+    }
+
+    public void distance(int mouseX, int mouseY) {
+        int monsterX = this.getWidth() / 2 - 60;
+        int monsterY = 100;
+
+        // 이미지의 폭과 높이를 가져옵니다.
+        int monsterWidth = monster.getIconWidth();
+        int monsterHeight = monster.getIconHeight();
+
+        // 마우스가 이미지 범위 내에 있는지 확인합니다.
+        if (mouseX >= monsterX && mouseX <= monsterX + monsterWidth &&
+                mouseY >= monsterY && mouseY <= monsterY + monsterHeight) {
+            System.out.println("마우스가 이미지 안에 들어옴");
+            alpha = 1.0f; // 완전 불투명
+        } else {
+            alpha = 0.7f; // 기본 투명도 값
+        }
+
+        // 이미지를 다시 그립니다.
+        repaint();
+    }

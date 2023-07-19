@@ -1,0 +1,3384 @@
+package game; import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.ArrayList; public class GamePlayPanel extends JPanel implements ActionListener {
+    //메인 캐릭터
+    ImageIcon image;
+    //배경화면
+    ImageIcon backgroundImage;
+
+    //몬스터
+    ImageIcon monster = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");
+
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+
+    //메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+    //몬스터 움직임을 위한 타이머
+    Timer monsterRespawnTimer;
+    //몬스터를 여러개 생성하기 위한 리스트
+    ArrayList<ImageIcon> monsterList = new ArrayList<>();
+    //몬스터 리스폰을 위한 시간(5초)
+    int monsterRespawnTime = 5000;
+
+    // 몬스터 움직임을 위한 타이머와 속도 추가
+    Timer monsterMoveTimer;
+    int monsterSpeed = 5;
+    ArrayList<Point> monsterPositions = new ArrayList<>();
+
+
+
+
+    //키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    //F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+
+
+
+    public GamePlayPanel() {
+        image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png");
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png");
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monster.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monster.getIconHeight()));
+                monsterPositions.add(new Point(monsterX, monsterY));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+
+
+
+        // 몬스터를 움직이게 하기 위한 타이머
+        monsterMoveTimer = new Timer(10, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                for (int i = 0; i < monsterPositions.size(); i++) {
+                    Point monsterPosition = monsterPositions.get(i);
+
+                    // 캐릭터의 월드 좌표 계산
+                    int characterWorldX = img_x;
+                    int characterWorldY = img_y;
+
+                    // 캐릭터와 몬스터의 중심 좌표 계산 (카메라 좌표를 고려하지 않음)
+                    int characterCenterX = characterWorldX + image.getIconWidth() / 2;
+                    int characterCenterY = characterWorldY + image.getIconHeight() / 2;
+                    int monsterCenterX = monsterPosition.x + monster.getIconWidth() / 2;
+                    int monsterCenterY = monsterPosition.y + monster.getIconHeight() / 2;
+
+                    // 중심 좌표 간의 거리 계산
+                    double dx = characterCenterX - monsterCenterX;
+                    double dy = characterCenterY - monsterCenterY;
+                    double distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // 캐릭터와 몬스터 중심 좌표가 일치하는 경우 움직이지 않음
+                    if (distance == 0) {
+                        continue;
+                    }
+
+                    // 정규화된 방향 벡터 계산
+                    double normalizedDx = dx / distance;
+                    double normalizedDy = dy / distance;
+
+                    // 몬스터의 새로운 중심 좌표 계산
+                    int newMonsterCenterX = (int) (monsterCenterX + normalizedDx * monsterSpeed);
+                    int newMonsterCenterY = (int) (monsterCenterY + normalizedDy * monsterSpeed);
+
+                    // 몬스터의 좌표 업데이트
+                    int newX = newMonsterCenterX - monster.getIconWidth() / 2;
+                    int newY = newMonsterCenterY - monster.getIconHeight() / 2;
+
+                    monsterPositions.set(i, new Point(newX, newY));
+                }
+
+                repaint();
+            }
+        });
+        monsterMoveTimer.start();
+
+
+
+
+
+
+
+
+
+
+
+
+        // ============================keyListener============================
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    }else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        // 카메라 좌표 제한
+        if(targetCamX < 0) {
+            targetCamX = 0;
+        } else if(targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if(targetCamY < 0) {
+            targetCamY = 0;
+        } else if(targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        // 화면 중앙에 캐릭터 고정
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        // 캐릭터 위치 조정
+        int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+        int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+
+        if (cam_x == 0) {
+            characterDrawX = img_x;
+        }
+        if (cam_x + getWidth() >= backgroundWidth) {
+            characterDrawX = img_x - (backgroundWidth - getWidth());
+        }
+        if (cam_y == 0) {
+            characterDrawY = img_y;
+        }
+        if (cam_y + getHeight() >= backgroundHeight) {
+            characterDrawY = img_y - (backgroundHeight - getHeight());
+        }
+
+        g.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+
+
+        for (Point monsterPosition : monsterPositions) {
+            int drawX = monsterPosition.x - cam_x;
+            int drawY = monsterPosition.y - cam_y;
+            g.drawImage(monster.getImage(), drawX, drawY, null);
+        }
+    }
+
+    private class MonsterTimer implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            monsterList.add(monster);
+            repaint();
+        }
+    }
+}
+
+
+=========================================================몬스터가 캐릭터를 향해 이동하는 것 까지 완벽함 =========================================
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener {
+    // 메인 캐릭터
+    ImageIcon image;
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");
+
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 움직임을 위한 타이머
+    Timer monsterRespawnTimer;
+    int monsterRespawnTime = 5000;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+        image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png");
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png");
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+        int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+        if (cam_x == 0) {
+            characterDrawX = img_x;
+        }
+        if (cam_x + getWidth() >= backgroundWidth) {
+            characterDrawX = img_x - (backgroundWidth - getWidth());
+        }
+        if (cam_y == 0) {
+            characterDrawY = img_y;
+        }
+        if (cam_y + getHeight() >= backgroundHeight) {
+            characterDrawY = img_y - (backgroundHeight - getHeight());
+        }
+
+        g.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+            g.drawImage(monster.image.getImage(), drawX, drawY, null);
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+    }
+
+    static class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance != 0) {
+                int moveX = (int) Math.round((dx / distance) * 2); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 2); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+    }
+}
+
+======================몬스터를 객체로 만들어 체력을 추가. 캐릭터를 향해 움직이는 것 까지 완벽함.===================
+
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener {
+    // 메인 캐릭터
+    ImageIcon image;
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster2.png");
+
+
+    // 총알 이미지
+    ImageIcon ballet = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png");
+
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+        image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png");
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png");
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+        int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+        if (cam_x == 0) {
+            characterDrawX = img_x;
+        }
+        if (cam_x + getWidth() >= backgroundWidth) {
+            characterDrawX = img_x - (backgroundWidth - getWidth());
+        }
+        if (cam_y == 0) {
+            characterDrawY = img_y;
+        }
+        if (cam_y + getHeight() >= backgroundHeight) {
+            characterDrawY = img_y - (backgroundHeight - getHeight());
+        }
+
+        g.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+            g.drawImage(monster.image.getImage(), drawX, drawY, null);
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+            if(timeForMonsterMovement % 50 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            if (distance != 0) {
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+    }
+}
+
+================몬스터가 걷는 모습처럼 보이기 위해 몬스터 이미지를 2개를 만들고 번갈아 가며 이미지를 바꾸는 것 까지 성공============
+
+
+
+
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener {
+    // 메인 캐릭터
+    ImageIcon image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png"); //TODO 이미지 바꾸기
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png");    //TODO 이미지 바꾸기
+
+
+    // 총알 이미지
+    ImageIcon ballet = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png"); //TODO 이미지 바꾸기
+
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    //int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png"); //TODO 이미지 바꾸기
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+        int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+        if (cam_x == 0) {
+            characterDrawX = img_x;
+        }
+        if (cam_x + getWidth() >= backgroundWidth) {
+            characterDrawX = img_x - (backgroundWidth - getWidth());
+        }
+        if (cam_y == 0) {
+            characterDrawY = img_y;
+        }
+        if (cam_y + getHeight() >= backgroundHeight) {
+            characterDrawY = img_y - (backgroundHeight - getHeight());
+        }
+
+        g.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            // 회전 변환을 적용하기 위해 AffineTransform 객체 생성
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(monster.angle, drawX + (double) monster.image.getIconWidth() / 2, drawY + (double) monster.image.getIconHeight() / 2);
+            g2d.setTransform(transform);
+
+            g2d.drawImage(monster.image.getImage(), drawX, drawY, null);
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+        double angle; // 회전 각도
+
+        int timeForMonsterMovement = 0;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+
+            //몬스터가 걷는 모션을 취하는 것처럼 보이기 위해 일정 시간마다 이미지를 교체
+            if(timeForMonsterMovement % 100 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            //몬스터가 메인 캐릭터에게 도착하면 움직임을 멈추기 위함.
+            if (distance != 0) {
+                angle = Math.atan2(dy, dx);
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+    }
+}
+
+
+================몬스터가 캐릭터를 바라보며 이동하는 것 까지 구현 완료===============
+
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener {
+
+    // 메인 캐릭터 클래스
+    MainCharacter mainCharacter;
+
+    // 메인 캐릭터
+    ImageIcon image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png"); //TODO 이미지 바꾸기
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png");    //TODO 이미지 바꾸기
+
+
+    // 총알 이미지
+    ImageIcon ballet = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png"); //TODO 이미지 바꾸기
+
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    //int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+
+        mainCharacter = new MainCharacter(image, 100);
+
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png"); //TODO 이미지 바꾸기
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+
+
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        mainCharacter.move(g2d);
+
+//        int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+//        int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+//        if (cam_x == 0) {
+//            characterDrawX = img_x;
+//        }
+//        if (cam_x + getWidth() >= backgroundWidth) {
+//            characterDrawX = img_x - (backgroundWidth - getWidth());
+//        }
+//        if (cam_y == 0) {
+//            characterDrawY = img_y;
+//        }
+//        if (cam_y + getHeight() >= backgroundHeight) {
+//            characterDrawY = img_y - (backgroundHeight - getHeight());
+//        }
+//
+//        g.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            // 회전 변환을 적용하기 위해 AffineTransform 객체 생성
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(monster.angle, drawX + (double) monster.image.getIconWidth() / 2, drawY + (double) monster.image.getIconHeight() / 2);
+            g2d.setTransform(transform);
+
+            g2d.drawImage(monster.image.getImage(), drawX, drawY, null);
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+    }
+
+
+    class MainCharacter{
+        ImageIcon image;
+        int hp;
+
+        public MainCharacter(ImageIcon image, int hp) {
+            this.image = image;
+            this.hp = hp;
+        }
+
+        void move(Graphics2D g2d){
+            int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+            int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+            if (cam_x == 0) {
+                characterDrawX = img_x;
+            }
+            if (cam_x + getWidth() >= backgroundWidth) {
+                characterDrawX = img_x - (backgroundWidth - getWidth());
+            }
+            if (cam_y == 0) {
+                characterDrawY = img_y;
+            }
+            if (cam_y + getHeight() >= backgroundHeight) {
+                characterDrawY = img_y - (backgroundHeight - getHeight());
+            }
+
+            g2d.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+        }
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+        double angle; // 회전 각도
+
+        int timeForMonsterMovement = 0;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+
+            //몬스터가 걷는 모션을 취하는 것처럼 보이기 위해 일정 시간마다 이미지를 교체
+            if(timeForMonsterMovement % 100 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            //몬스터가 메인 캐릭터에게 도착하면 움직임을 멈추기 위함.
+            if (distance != 0) {
+                angle = Math.atan2(dy, dx);
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+    }
+}
+
+==================================== 메인 캐릭터 객체화 성공=================================
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener{
+
+    // 메인 캐릭터 클래스
+    MainCharacter mainCharacter;
+
+    // 메인 캐릭터
+    ImageIcon image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png"); //TODO 이미지 바꾸기
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png");    //TODO 이미지 바꾸기
+
+
+    // 총알 이미지
+    ImageIcon bullet = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png"); //TODO 이미지 바꾸기
+
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    int mouseX;
+    int mouseY;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    //int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+
+        mainCharacter = new MainCharacter(image, 100);
+
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png"); //TODO 이미지 바꾸기
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+
+        // 캐릭터가 마우스 방향을 바라볼 수 있도록 마우스 포인터의 좌표를 가져옴
+        addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        mainCharacter.move(g2d);
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            // 회전 변환을 적용하기 위해 AffineTransform 객체 생성
+            // 몬스터가 항상 캐릭터를 바다보도록 만듦
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(monster.angle, drawX + (double) monster.image.getIconWidth() / 2, drawY + (double) monster.image.getIconHeight() / 2);
+            g2d.setTransform(transform);
+
+            g2d.drawImage(monster.image.getImage(), drawX, drawY, null);
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+    }
+
+
+    class MainCharacter{
+        ImageIcon image;
+
+        int x = img_x;
+        int y = img_y;
+        int hp;
+        double angle;
+
+
+        public MainCharacter(ImageIcon image, int hp) {
+            this.image = image;
+            this.hp = hp;
+        }
+
+        void move(Graphics2D g2d){
+            int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+            int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+            if (cam_x == 0) {
+                characterDrawX = img_x;
+            }
+            if (cam_x + getWidth() >= backgroundWidth) {
+                characterDrawX = img_x - (backgroundWidth - getWidth());
+            }
+            if (cam_y == 0) {
+                characterDrawY = img_y;
+            }
+            if (cam_y + getHeight() >= backgroundHeight) {
+                characterDrawY = img_y - (backgroundHeight - getHeight());
+            }
+
+            // 캐릭터의 중심 좌표
+            int characterCenterX = characterDrawX + image.getIconWidth() / 2;
+            int characterCenterY = characterDrawY + image.getIconHeight() / 2;
+
+            // 마우스와 캐릭터의 중심 사이의 각도 계산
+            double dx = mouseX - characterCenterX;
+            double dy = mouseY - characterCenterY;
+            angle = Math.atan2(dy, dx);
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(angle, characterCenterX, characterCenterY);
+            g2d.setTransform(transform);
+            g2d.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+        }
+
+        void draw(Graphics2D g2d){
+            g2d.drawImage(this.image.getImage(), this.x, this.y, null);
+        }
+
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+        double angle; // 회전 각도
+
+        int timeForMonsterMovement = 0;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+
+            //몬스터가 걷는 모션을 취하는 것처럼 보이기 위해 일정 시간마다 이미지를 교체
+            if(timeForMonsterMovement % 100 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            //몬스터가 메인 캐릭터에게 도착하면 움직임을 멈추기 위함.
+            if (distance != 0) {
+                angle = Math.atan2(dy, dx);
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+    }
+}
+
+==================메인 캐릭터가 항상 마우스 포인터를 바라볼 수 있도록 구현 완료===============
+
+
+
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener{
+
+    // 메인 캐릭터 클래스
+    MainCharacter mainCharacter;
+
+    //총알 클래스
+    Bullet bullet;
+
+    // 메인 캐릭터
+    ImageIcon image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png"); //TODO 이미지 바꾸기
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster2.png");    //TODO 이미지 바꾸기
+
+
+    // 총알 이미지
+    ImageIcon bulletImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png"); //TODO 이미지 바꾸기
+    // 총알들의 리스트
+    ArrayList<Bullet> bullets = new ArrayList<>();
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    int mouseX;
+    int mouseY;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    //int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+
+        mainCharacter = new MainCharacter(image, 100);
+
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png"); //TODO 이미지 바꾸기
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+
+
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+
+        addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+                //총알이 발사된 위치
+                int bulletX = img_x + image.getIconWidth() / 2;
+                int bulletY = img_y + image.getIconHeight() / 2;
+
+                //총알의 각도 계산
+                double bulletAngle = Math.atan2(e.getY() - mouseY, e.getX() - mouseX);
+
+                //총알 생성
+                bullets.add(new Bullet(bulletImage, bulletX + cam_x, bulletY + cam_y, bulletAngle));
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
+
+        // 캐릭터가 마우스 방향을 바라볼 수 있도록 마우스 포인터의 좌표를 가져옴
+        addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        for (Bullet bullet : bullets) {
+            bullet.move();
+        }
+
+        repaint();
+    }
+
+
+
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        mainCharacter.moveAndRotateAndDraw(g2d);
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            // 회전 변환을 적용하기 위해 임시 Graphics2D 객체 생성
+            Graphics2D monsterG2d = (Graphics2D) g.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(monster.angle, drawX + (double) monster.image.getIconWidth() / 2, drawY + (double) monster.image.getIconHeight() / 2);
+            monsterG2d.setTransform(transform);
+
+            monsterG2d.drawImage(monster.image.getImage(), drawX, drawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            monsterG2d.dispose();
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+
+
+
+
+
+
+
+
+        // 총알 회전 없이 그리기
+
+        for (Bullet bullet : bullets) {
+            Graphics2D bulletG2d = (Graphics2D) g.create();
+            bulletG2d.drawImage(bullet.image.getImage(), bullet.x - cam_x, bullet.y - cam_y, null);
+        }
+
+    }
+
+
+    class MainCharacter{
+        ImageIcon image;
+
+        int x = img_x;
+        int y = img_y;
+        int hp;
+        double angle;
+
+
+        public MainCharacter(ImageIcon image, int hp) {
+            this.image = image;
+            this.hp = hp;
+        }
+
+        void moveAndRotateAndDraw(Graphics2D g2d){
+            int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+            int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+            if (cam_x == 0) {
+                characterDrawX = img_x;
+            }
+            if (cam_x + getWidth() >= backgroundWidth) {
+                characterDrawX = img_x - (backgroundWidth - getWidth());
+            }
+            if (cam_y == 0) {
+                characterDrawY = img_y;
+            }
+            if (cam_y + getHeight() >= backgroundHeight) {
+                characterDrawY = img_y - (backgroundHeight - getHeight());
+            }
+
+            // 캐릭터의 중심 좌표
+            int characterCenterX = characterDrawX + image.getIconWidth() / 2;
+            int characterCenterY = characterDrawY + image.getIconHeight() / 2;
+
+            // 마우스와 캐릭터의 중심 사이의 각도 계산
+            double dx = mouseX - characterCenterX;
+            double dy = mouseY - characterCenterY;
+            angle = Math.atan2(dy, dx);
+
+            // 회전 및 이미지 그리기를 위한 임시 Graphics2D 객체 생성
+            Graphics2D characterG2d = (Graphics2D) g2d.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(angle, characterCenterX, characterCenterY);
+            characterG2d.setTransform(transform);
+            characterG2d.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            characterG2d.dispose();
+        }
+
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+        double angle; // 회전 각도
+
+        int timeForMonsterMovement = 0;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+
+            //몬스터가 걷는 모션을 취하는 것처럼 보이기 위해 일정 시간마다 이미지를 교체
+            if(timeForMonsterMovement % 100 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            //몬스터가 메인 캐릭터에게 도착하면 움직임을 멈추기 위함.
+            if (distance != 0) {
+                angle = Math.atan2(dy, dx);
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+    }
+
+    class Bullet {
+        ImageIcon image;
+        int x, y;
+        double angle; // 총알의 이동 각도
+
+
+
+        public Bullet(ImageIcon image, int x, int y, double angle) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.angle = angle;
+        }
+
+        public void move() {
+            // 총알 속도 조절 변수
+            int speed = 10;
+
+            x += Math.round(Math.cos(angle) * speed);
+            y += Math.round(Math.sin(angle) * speed);
+        }
+
+
+
+    }
+}
+
+
+============================메인 캐릭터와 몬스터의 회전을 독단적인 회전으로 변경 완료 이제 총알 발사만 해결하면 됨.=======================
+
+
+
+
+
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener{
+
+    // 메인 캐릭터 클래스
+    MainCharacter mainCharacter;
+
+    //총알 클래스
+    Bullet bullet;
+
+    // 메인 캐릭터
+    ImageIcon image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\60px캐릭터.png"); //TODO 이미지 바꾸기
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\monster2.png");    //TODO 이미지 바꾸기
+
+
+    // 총알 이미지
+    ImageIcon bulletImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png"); //TODO 이미지 바꾸기
+    // 총알들의 리스트
+    ArrayList<Bullet> bullets = new ArrayList<>();
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    int mouseX;
+    int mouseY;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    //int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+
+        mainCharacter = new MainCharacter(image, 100);
+
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\back.png"); //TODO 이미지 바꾸기
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+
+
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+
+        addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+                // 캐릭터의 중심 좌표에서 총알이 발사됩니다.
+                int bulletX = img_x + image.getIconWidth() / 2 - bulletImage.getIconWidth() / 2;
+                int bulletY = img_y + image.getIconHeight() / 2 - bulletImage.getIconHeight() / 2;
+
+                // 총알의 각도 계산
+                double dx = e.getX() - (bulletX - cam_x);
+                double dy = e.getY() - (bulletY - cam_y);
+                double bulletAngle = Math.atan2(dy, dx);
+
+                // 총알 생성
+                bullets.add(new Bullet(bulletImage, bulletX, bulletY, bulletAngle));
+            }
+
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
+
+        // 캐릭터가 마우스 방향을 바라볼 수 있도록 마우스 포인터의 좌표를 가져옴
+        addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        for (Bullet bullet : bullets) {
+            bullet.move();
+        }
+
+        repaint();
+    }
+
+
+
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        mainCharacter.moveAndRotateAndDraw(g2d);
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            // 회전 변환을 적용하기 위해 임시 Graphics2D 객체 생성
+            Graphics2D monsterG2d = (Graphics2D) g.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(monster.angle, drawX + (double) monster.image.getIconWidth() / 2, drawY + (double) monster.image.getIconHeight() / 2);
+            monsterG2d.setTransform(transform);
+
+            monsterG2d.drawImage(monster.image.getImage(), drawX, drawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            monsterG2d.dispose();
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+
+
+
+
+
+
+
+
+        for (Bullet bullet : bullets) {
+            Graphics2D bulletG2d = (Graphics2D) g.create();
+
+            // Shipping해주세요.
+            int drawX = bullet.x - cam_x;
+            int drawY = bullet.y - cam_y;
+            bulletG2d.drawImage(bullet.image.getImage(), drawX, drawY, null);
+
+            bulletG2d.dispose();
+        }
+
+    }
+
+
+    class MainCharacter{
+        ImageIcon image;
+
+        int x = img_x;
+        int y = img_y;
+        int hp;
+        double angle;
+
+
+        public MainCharacter(ImageIcon image, int hp) {
+            this.image = image;
+            this.hp = hp;
+        }
+
+        void moveAndRotateAndDraw(Graphics2D g2d){
+            int characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+            int characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+            if (cam_x == 0) {
+                characterDrawX = img_x;
+            }
+            if (cam_x + getWidth() >= backgroundWidth) {
+                characterDrawX = img_x - (backgroundWidth - getWidth());
+            }
+            if (cam_y == 0) {
+                characterDrawY = img_y;
+            }
+            if (cam_y + getHeight() >= backgroundHeight) {
+                characterDrawY = img_y - (backgroundHeight - getHeight());
+            }
+
+            // 캐릭터의 중심 좌표
+            int characterCenterX = characterDrawX + image.getIconWidth() / 2;
+            int characterCenterY = characterDrawY + image.getIconHeight() / 2;
+
+            // 마우스와 캐릭터의 중심 사이의 각도 계산
+            double dx = mouseX - characterCenterX;
+            double dy = mouseY - characterCenterY;
+            angle = Math.atan2(dy, dx);
+
+            // 회전 및 이미지 그리기를 위한 임시 Graphics2D 객체 생성
+            Graphics2D characterG2d = (Graphics2D) g2d.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(angle, characterCenterX, characterCenterY);
+            characterG2d.setTransform(transform);
+            characterG2d.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            characterG2d.dispose();
+        }
+
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+        double angle; // 회전 각도
+
+        int timeForMonsterMovement = 0;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+
+            //몬스터가 걷는 모션을 취하는 것처럼 보이기 위해 일정 시간마다 이미지를 교체
+            if(timeForMonsterMovement % 100 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            //몬스터가 메인 캐릭터에게 도착하면 움직임을 멈추기 위함.
+            if (distance != 0) {
+                angle = Math.atan2(dy, dx);
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+    }
+
+    class Bullet {
+        ImageIcon image;
+        int x, y;
+        double angle; // 총알의 이동 각도
+
+
+
+        public Bullet(ImageIcon image, int x, int y, double angle) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.angle = angle;
+        }
+
+        public void move() {
+            // 총알 속도 조절 변수
+            int speed = 10;
+
+            x += Math.round(Math.cos(angle) * speed);
+            y += Math.round(Math.sin(angle) * speed);
+        }
+
+
+
+    }
+}
+
+
+=============================총알 발사까지 정말 완.벽.그.자.체!!==============================
+
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener{
+
+    // 메인 캐릭터 클래스
+    MainCharacter mainCharacter;
+
+    //총알 클래스
+    Bullet bullet;
+
+    // 메인 캐릭터
+    ImageIcon image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\메인캐릭터.png");
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\몬스터1.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\몬스터1.png");    //TODO 이미지 바꾸기
+
+    //메인 캐릭터 체력 감소분
+    int hpDecreaseAmount = 1;
+
+    //처치한 몬스터의 수
+    int killed;
+
+
+    // 총알 이미지
+    ImageIcon bulletImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png"); //TODO 이미지 바꾸기
+    // 총알들의 리스트
+    ArrayList<Bullet> bullets = new ArrayList<>();
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    int mouseX;
+    int mouseY;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+
+        mainCharacter = new MainCharacter(image, 100);
+
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\배경화면.jpg");
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+
+
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+
+        addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+                // 캐릭터의 중심 좌표에서 총알이 발사됩니다.
+                int bulletX = img_x + image.getIconWidth() / 2 - bulletImage.getIconWidth() / 2;
+                int bulletY = img_y + image.getIconHeight() / 2 - bulletImage.getIconHeight() / 2;
+
+                // 총알의 각도 계산
+                double dx = e.getX() - (bulletX - cam_x);
+                double dy = e.getY() - (bulletY - cam_y);
+                double bulletAngle = Math.atan2(dy, dx);
+
+                // 총알 생성
+                bullets.add(new Bullet(bulletImage, bulletX, bulletY, bulletAngle));
+            }
+
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
+
+        // 캐릭터가 마우스 방향을 바라볼 수 있도록 마우스 포인터의 좌표를 가져옴
+        addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        for (Bullet bullet : bullets) {
+            bullet.move();
+        }
+        repaint();
+    }
+
+
+
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        mainCharacter.moveAndRotateAndDraw(g2d);
+
+        // 몬스터와 메인 캐릭터의 거리에 따라 체력 감소
+        for (Monster monster : monsters) {
+            if (mainCharacter.distance(monster) < 100) {
+                mainCharacter.decreaseHP(hpDecreaseAmount);
+                break;
+            }
+        }
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            // 회전 변환을 적용하기 위해 임시 Graphics2D 객체 생성
+            Graphics2D monsterG2d = (Graphics2D) g.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(monster.angle, drawX + (double) monster.image.getIconWidth() / 2, drawY + (double) monster.image.getIconHeight() / 2);
+            monsterG2d.setTransform(transform);
+
+            monsterG2d.drawImage(monster.image.getImage(), drawX, drawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            monsterG2d.dispose();
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+
+
+
+        for (Bullet bullet : bullets) {
+            Graphics2D bulletG2d = (Graphics2D) g.create();
+
+            int drawX = bullet.x - cam_x;
+            int drawY = bullet.y - cam_y;
+            bulletG2d.drawImage(bullet.image.getImage(), drawX, drawY, null);
+
+            bulletG2d.dispose();
+        }
+
+        ArrayList<Bullet> bulletsToRemove = new ArrayList<>();
+        ArrayList<Monster> monstersToRemove = new ArrayList<>();
+
+        for (Bullet bullet : bullets) {
+            bullet.move();
+
+            // 총알이 화면 밖으로 나간 경우, 제거 대상으로 추가
+            if (bullet.isOutOfBound()) {
+                bulletsToRemove.add(bullet);
+            }
+
+            // 총알이 몬스터와 충돌한 경우, 제거 대상으로 추가
+            for (Monster monster : monsters) {
+                if (monster.isCollidedWithBullet(bullet)) {
+                    monstersToRemove.add(monster);
+                    bulletsToRemove.add(bullet);
+                    break;
+                }
+            }
+        }
+
+        // 제거 대상 총알과 몬스터를 리스트에서 삭제
+        bullets.removeAll(bulletsToRemove);
+        monsters.removeAll(monstersToRemove);
+
+    }
+
+
+    class MainCharacter{
+        ImageIcon image;
+
+        int x = img_x;
+        int y = img_y;
+        int hp;
+        double angle;
+
+        //캐릭터의 중심 좌표(배경화면 이동을 고려한 배경화면 기준의 실제 좌표)
+        int characterCenterX;
+        int characterCenterY;
+        int characterDrawX;
+        int characterDrawY;
+
+
+        public MainCharacter(ImageIcon image, int hp) {
+            this.image = image;
+            this.hp = hp;
+        }
+
+        void moveAndRotateAndDraw(Graphics2D g2d){
+            characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+            characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+            if (cam_x == 0) {
+                characterDrawX = img_x;
+            }
+            if (cam_x + getWidth() >= backgroundWidth) {
+                characterDrawX = img_x - (backgroundWidth - getWidth());
+            }
+            if (cam_y == 0) {
+                characterDrawY = img_y;
+            }
+            if (cam_y + getHeight() >= backgroundHeight) {
+                characterDrawY = img_y - (backgroundHeight - getHeight());
+            }
+
+            // 캐릭터의 중심 좌표
+            characterCenterX = characterDrawX + image.getIconWidth() / 2;
+            characterCenterY = characterDrawY + image.getIconHeight() / 2;
+
+            // 마우스와 캐릭터의 중심 사이의 각도 계산
+            double dx = mouseX - characterCenterX;
+            double dy = mouseY - characterCenterY;
+            angle = Math.atan2(dy, dx);
+
+            // 회전 및 이미지 그리기를 위한 임시 Graphics2D 객체 생성
+            Graphics2D characterG2d = (Graphics2D) g2d.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(angle, characterCenterX, characterCenterY);
+            characterG2d.setTransform(transform);
+            characterG2d.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            characterG2d.dispose();
+        }
+
+        // 메인 캐릭터의 체력을 감소시키는 메소드
+        public void decreaseHP(int amount) {
+            hp -= 1;
+            if (hp < 0) {
+                hp = 0;
+            }
+        }
+
+        public double distance(Monster monster) {
+            // 배경화면에 따른 몬스터와 메인 캐릭터 사이의 거리를 구함
+            int backgroundDx = monster.x - x;
+            int backgroundDy = monster.y - y;
+
+            System.out.println(Math.sqrt(backgroundDx * backgroundDx + backgroundDy * backgroundDy));
+
+            // 두 점 사이의 거리를 구함
+            return Math.sqrt(backgroundDx * backgroundDx + backgroundDy * backgroundDy);
+        }
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+        double angle; // 회전 각도
+
+        int timeForMonsterMovement = 0;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+
+            //몬스터와 메인 캐릭터 사이의 거리를 구함
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+
+            //몬스터가 걷는 모션을 취하는 것처럼 보이기 위해 일정 시간마다 이미지를 교체
+            if(timeForMonsterMovement % 100 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            //몬스터가 메인 캐릭터에게 도착하면 움직임을 멈추기 위함.
+            if (distance != 0) {
+                angle = Math.atan2(dy, dx);
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+
+        //몬스터와 총알이 충돌하면 총알을 제거하기 위한 메소드
+        public boolean isCollidedWithBullet(Bullet bullet) {
+            int collisionPadding = 2;
+            Rectangle monsterRect = new Rectangle(x + collisionPadding, y + collisionPadding, image.getIconWidth() - 2*collisionPadding, image.getIconHeight() - 2*collisionPadding);
+            Rectangle bulletRect = new Rectangle(bullet.x, bullet.y, bullet.image.getIconWidth(), bullet.image.getIconHeight());
+            return monsterRect.intersects(bulletRect);
+        }
+    }
+
+    class Bullet {
+        ImageIcon image;
+        int x, y;
+        double angle; // 총알의 이동 각도
+
+
+
+        public Bullet(ImageIcon image, int x, int y, double angle) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.angle = angle;
+        }
+
+        public void move() {
+            // 총알 속도 조절 변수
+            int speed = 10;
+
+            x += Math.round(Math.cos(angle) * speed);
+            y += Math.round(Math.sin(angle) * speed);
+        }
+
+        //총알이 배경화면 밖으로 나갈 경우 제거하기 위한 메소드
+        public boolean isOutOfBound() {
+            if (x < 0 || y < 0 || x + image.getIconWidth() > backgroundWidth || y + image.getIconHeight() > backgroundHeight) {
+                return true;
+            }
+            return false;
+        }
+
+
+
+    }
+}
+
+
+
+
+
+
+
+package game;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
+
+public class GamePlayPanel extends JPanel implements ActionListener{
+
+    // 메인 캐릭터 클래스
+    MainCharacter mainCharacter;
+
+    //총알 클래스
+    Bullet bullet;
+
+    // 메인 캐릭터
+    ImageIcon image = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\메인캐릭터.png");
+
+    // 배경화면
+    ImageIcon backgroundImage;
+
+    // 몬스터
+    ImageIcon monsterImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\몬스터1.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\몬스터1.png");    //TODO 이미지 바꾸기
+
+    //메인 캐릭터 체력 감소분
+    int hpDecreaseAmount = 1;
+
+    //처치한 몬스터의 수
+    int killed;
+
+
+    // 총알 이미지
+    ImageIcon bulletImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\총알.png"); //TODO 이미지 바꾸기
+    // 총알들의 리스트
+    ArrayList<Bullet> bullets = new ArrayList<>();
+    int backgroundWidth;
+    int backgroundHeight;
+
+    int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
+    int cam_x = 0, cam_y = 0;
+
+    int mouseX;
+    int mouseY;
+
+    // 메인 캐릭터 움직임을 위한 타이머
+    Timer timer;
+
+    // 몬스터 리스폰을 위한 타이머
+    Timer monsterRespawnTimer;
+    public int monsterRespawnTime = 5000;
+
+    int timeForMonsterMovement = 0;
+
+    // 몬스터들의 리스트
+    ArrayList<Monster> monsters = new ArrayList<>();
+
+    // 키 이벤트를 위한 boolean 배열
+    boolean[] keyState = new boolean[256];
+
+    // F1 키를 이용한 도움말 기능을 위한 타이머 스탑 TODO 화면의 모든 움직임을 멈추고 도움말 탭을 띄워야함.
+    boolean isStop = false;
+
+    public GamePlayPanel() {
+
+        mainCharacter = new MainCharacter(image, 10000);
+
+        backgroundImage = new ImageIcon("C:\\Users\\spring\\deliery-service\\game\\src\\main\\java\\img\\배경화면.jpg");
+
+        backgroundWidth = backgroundImage.getIconWidth();
+        backgroundHeight = backgroundImage.getIconHeight();
+
+        timer = new Timer(10, this); // 20 밀리초마다 위치 업데이트
+        timer.start();
+
+
+
+
+        monsterRespawnTimer = new Timer(monsterRespawnTime, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int monsterX = (int)(Math.random() * (backgroundWidth - monsterImage.getIconWidth()));
+                int monsterY = (int)(Math.random() * (backgroundHeight - monsterImage.getIconHeight()));
+                int monsterHP = 100; // 체력을 100으로 초기화
+                monsters.add(new Monster(monsterImage, monsterX, monsterY, monsterHP));
+                repaint();
+            }
+        });
+        monsterRespawnTimer.start();
+
+
+        addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+                // 캐릭터의 중심 좌표에서 총알이 발사됩니다.
+                int bulletX = img_x + image.getIconWidth() / 2 - bulletImage.getIconWidth() / 2;
+                int bulletY = img_y + image.getIconHeight() / 2 - bulletImage.getIconHeight() / 2;
+
+                // 총알의 각도 계산
+                double dx = e.getX() - (bulletX - cam_x);
+                double dy = e.getY() - (bulletY - cam_y);
+                double bulletAngle = Math.atan2(dy, dx);
+
+                // 총알 생성
+                bullets.add(new Bullet(bulletImage, bulletX, bulletY, bulletAngle));
+            }
+
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
+
+        // 캐릭터가 마우스 방향을 바라볼 수 있도록 마우스 포인터의 좌표를 가져옴
+        addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                mouseX = e.getX();
+                mouseY = e.getY();
+            }
+        });
+
+        addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keyState[e.getKeyCode()] = true;
+                // 게임 일시정지, 시작 기능 TODO F1키 도움말 기능 추가
+                if (keyState[KeyEvent.VK_F1]){
+                    if(!isStop){
+                        isStop = true;
+                        timer.stop();
+                        System.out.println("멈춤");
+                    } else {
+                        isStop = false;
+                        timer.start();
+                        System.out.println("시작");
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyState[e.getKeyCode()] = false;
+            }
+        });
+
+        this.requestFocus();
+        setFocusable(true);
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        int speed = 10; // 캐릭터 및 카메라 이동 속도를 조절할 수 있는 변수
+        int new_img_x = img_x;
+        int new_img_y = img_y;
+
+        if (keyState[KeyEvent.VK_LEFT] || keyState[KeyEvent.VK_A]) {
+            new_img_x -= speed;
+        }
+        if (keyState[KeyEvent.VK_RIGHT] || keyState[KeyEvent.VK_D]) {
+            new_img_x += speed;
+        }
+        if (keyState[KeyEvent.VK_UP] || keyState[KeyEvent.VK_W]) {
+            new_img_y -= speed;
+        }
+        if (keyState[KeyEvent.VK_DOWN] || keyState[KeyEvent.VK_S]) {
+            new_img_y += speed;
+        }
+
+        // 캐릭터가 배경화면 내에서 이동하는지 확인
+        if (new_img_x >= 0 && new_img_x + image.getIconWidth() <= backgroundWidth) {
+            img_x = new_img_x;
+        }
+        if (new_img_y >= 0 && new_img_y + image.getIconHeight() <= backgroundHeight) {
+            img_y = new_img_y;
+        }
+
+        // 카메라 위치 업데이트
+        int windowWidth = getWidth();
+        int windowHeight = getHeight();
+        int centerX = img_x + image.getIconWidth() / 2;
+        int centerY = img_y + image.getIconHeight() / 2;
+        int targetCamX = centerX - windowWidth / 2;
+        int targetCamY = centerY - windowHeight / 2;
+
+        if (targetCamX < 0) {
+            targetCamX = 0;
+        } else if (targetCamX + windowWidth > backgroundWidth) {
+            targetCamX = backgroundWidth - windowWidth;
+        }
+
+        if (targetCamY < 0) {
+            targetCamY = 0;
+        } else if (targetCamY + windowHeight > backgroundHeight) {
+            targetCamY = backgroundHeight - windowHeight;
+        }
+
+        cam_x = targetCamX;
+        cam_y = targetCamY;
+
+        for (Bullet bullet : bullets) {
+            bullet.move();
+        }
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
+
+        mainCharacter.moveAndRotateAndDraw(g2d);
+
+        // 몬스터와 메인 캐릭터의 충돌 처리
+        // 몬스터와 메인 캐릭터의 거리에 따라 체력 감소
+        for (Monster monster : monsters) {
+            if (mainCharacter.distance(monster) < 100) {
+                mainCharacter.decreaseHP(hpDecreaseAmount);
+                System.out.println("메인 캐릭터의 체력 : " + mainCharacter.hp);
+                break;
+            }
+        }
+
+        for (Monster monster : monsters) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            // 회전 변환을 적용하기 위해 임시 Graphics2D 객체 생성
+            Graphics2D monsterG2d = (Graphics2D) g.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(monster.angle, drawX + (double) monster.image.getIconWidth() / 2, drawY + (double) monster.image.getIconHeight() / 2);
+            monsterG2d.setTransform(transform);
+
+            monsterG2d.drawImage(monster.image.getImage(), drawX, drawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            monsterG2d.dispose();
+        }
+
+        // 캐릭터 위치 업데이트 후 몬스터들이 캐릭터를 향해 움직이도록 함
+        for (Monster monster : monsters) {
+            monster.moveTowards(img_x, img_y);
+        }
+
+
+
+        for (Bullet bullet : bullets) {
+            Graphics2D bulletG2d = (Graphics2D) g.create();
+
+            int drawX = bullet.x - cam_x;
+            int drawY = bullet.y - cam_y;
+            bulletG2d.drawImage(bullet.image.getImage(), drawX, drawY, null);
+
+            bulletG2d.dispose();
+        }
+
+        ArrayList<Bullet> bulletsToRemove = new ArrayList<>();
+        ArrayList<Monster> monstersToRemove = new ArrayList<>();
+
+        for (Bullet bullet : bullets) {
+            bullet.move();
+
+            // 총알이 화면 밖으로 나간 경우, 제거 대상으로 추가
+            if (bullet.isOutOfBound()) {
+                bulletsToRemove.add(bullet);
+            }
+
+            // 총알이 몬스터와 충돌한 경우, 제거 대상으로 추가
+            for (Monster monster : monsters) {
+                if (monster.isCollidedWithBullet(bullet)) {
+                    monstersToRemove.add(monster);
+                    bulletsToRemove.add(bullet);
+                    break;
+                }
+            }
+        }
+
+        // 제거 대상 총알과 몬스터를 리스트에서 삭제
+        bullets.removeAll(bulletsToRemove);
+        monsters.removeAll(monstersToRemove);
+
+    }
+
+
+    class MainCharacter{
+        ImageIcon image;
+
+        int x = img_x;
+        int y = img_y;
+        int hp;
+        double angle;
+
+        //캐릭터의 중심 좌표(배경화면 이동을 고려한 배경화면 기준의 실제 좌표)
+        int characterCenterX;
+        int characterCenterY;
+        int characterDrawX;
+        int characterDrawY;
+
+
+        public MainCharacter(ImageIcon image, int hp) {
+            this.image = image;
+            this.hp = hp;
+        }
+
+        void moveAndRotateAndDraw(Graphics2D g2d){
+            characterDrawX = getWidth() / 2 - image.getIconWidth() / 2;
+            characterDrawY = getHeight() / 2 - image.getIconHeight() / 2;
+            if (cam_x == 0) {
+                characterDrawX = img_x;
+            }
+            if (cam_x + getWidth() >= backgroundWidth) {
+                characterDrawX = img_x - (backgroundWidth - getWidth());
+            }
+            if (cam_y == 0) {
+                characterDrawY = img_y;
+            }
+            if (cam_y + getHeight() >= backgroundHeight) {
+                characterDrawY = img_y - (backgroundHeight - getHeight());
+            }
+
+            // 캐릭터의 중심 좌표
+            characterCenterX = characterDrawX + image.getIconWidth() / 2;
+            characterCenterY = characterDrawY + image.getIconHeight() / 2;
+
+            // 마우스와 캐릭터의 중심 사이의 각도 계산
+            double dx = mouseX - characterCenterX;
+            double dy = mouseY - characterCenterY;
+            angle = Math.atan2(dy, dx);
+
+            // 회전 및 이미지 그리기를 위한 임시 Graphics2D 객체 생성
+            Graphics2D characterG2d = (Graphics2D) g2d.create();
+
+            AffineTransform transform = new AffineTransform();
+            transform.rotate(angle, characterCenterX, characterCenterY);
+            characterG2d.setTransform(transform);
+            characterG2d.drawImage(image.getImage(), characterDrawX, characterDrawY, null);
+
+            // 임시 Graphics2D 객체 해제
+            characterG2d.dispose();
+        }
+
+        // 메인 캐릭터의 체력을 감소시키는 메소드
+        public void decreaseHP(int amount) {
+            hp -= 1;
+            if (hp < 0) {
+                hp = 0;
+            }
+        }
+
+        // 메인 캐릭터와 몬스터 사이의 거리를 구하기 위한 메소드
+        public double distance(Monster monster) {
+            int drawX = monster.x - cam_x;
+            int drawY = monster.y - cam_y;
+
+            int dx = characterDrawX - drawX;
+            int dy = characterDrawY - drawY;
+
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+    }
+
+    class Monster {
+        ImageIcon image;
+        int x, y;
+        int hp;
+        double angle; // 회전 각도
+
+        int timeForMonsterMovement = 0;
+
+        public Monster(ImageIcon image, int x, int y, int hp) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.hp = hp;
+        }
+
+        // 몬스터가 캐릭터를 향해 움직이는 메소드 추가
+        public void moveTowards(int targetX, int targetY) {
+
+            //몬스터와 메인 캐릭터 사이의 거리를 구함
+            int dx = targetX - x;
+            int dy = targetY - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+
+            timeForMonsterMovement += 10;
+
+
+            //몬스터가 걷는 모션을 취하는 것처럼 보이기 위해 일정 시간마다 이미지를 교체
+            if(timeForMonsterMovement % 100 == 0){
+                if(this.image == monsterImage) {
+                    this.image = monsterImage2;
+                }else {
+                    this.image = monsterImage;
+                }
+                timeForMonsterMovement = 0;
+            }
+
+            //몬스터가 메인 캐릭터에게 도착하면 움직임을 멈추기 위함.
+            if (distance != 0) {
+                angle = Math.atan2(dy, dx);
+                int moveX = (int) Math.round((dx / distance) * 4); // 속도 조절
+                int moveY = (int) Math.round((dy / distance) * 4); // 속도 조절
+                x += moveX;
+                y += moveY;
+            }
+        }
+
+        //몬스터와 총알이 충돌하면 총알을 제거하기 위한 메소드
+        public boolean isCollidedWithBullet(Bullet bullet) {
+            int collisionPadding = 2;
+            Rectangle monsterRect = new Rectangle(x + collisionPadding, y + collisionPadding, image.getIconWidth() - 2*collisionPadding, image.getIconHeight() - 2*collisionPadding);
+            Rectangle bulletRect = new Rectangle(bullet.x, bullet.y, bullet.image.getIconWidth(), bullet.image.getIconHeight());
+            return monsterRect.intersects(bulletRect);
+        }
+    }
+
+    class Bullet {
+        ImageIcon image;
+        int x, y;
+        double angle; // 총알의 이동 각도
+
+
+
+        public Bullet(ImageIcon image, int x, int y, double angle) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.angle = angle;
+        }
+
+        public void move() {
+            // 총알 속도 조절 변수
+            int speed = 10;
+
+            x += Math.round(Math.cos(angle) * speed);
+            y += Math.round(Math.sin(angle) * speed);
+        }
+
+        //총알이 배경화면 밖으로 나갈 경우 제거하기 위한 메소드
+        public boolean isOutOfBound() {
+            if (x < 0 || y < 0 || x + image.getIconWidth() > backgroundWidth || y + image.getIconHeight() > backgroundHeight) {
+                return true;
+            }
+            return false;
+        }
+
+    }
+}
+
+
+========================== 몬스터와 충돌 처리까지 완벽함 ================================
