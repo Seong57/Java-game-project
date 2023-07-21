@@ -1,2 +1,2 @@
 
-java gui game project
+JAVA GUI GAME PROJECT
