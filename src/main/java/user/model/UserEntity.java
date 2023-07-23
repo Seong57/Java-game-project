@@ -31,4 +31,8 @@ public class UserEntity extends Entity {
     public void setScore(int score) {
         this.score = score;
     }
+
+    public String toRank(int rank){
+        return rank + "등  --  " + getName() + "    :    " + getScore() + "점";
+    }
 }

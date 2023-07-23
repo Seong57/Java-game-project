@@ -227,6 +227,7 @@ public class GamePlayPanel extends JPanel implements ActionListener{
             public void mouseMoved(MouseEvent e) {
                 mouseX = e.getX();
                 mouseY = e.getY();
+                requestFocus();
             }
         });
 

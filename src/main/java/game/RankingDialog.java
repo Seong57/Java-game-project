@@ -16,10 +16,18 @@ public class RankingDialog extends JDialog {
 
         // 랭킹 정보 표시를 구현하세요 (JLabel, JList 등을 사용하여 랭킹 정보를 표시할 수 있습니다.)
         DefaultListModel<String> listModel = new DefaultListModel<>();
-        for (UserEntity user : userList){
-            listModel.addElement(rank+ "등  --   " +user.getName() + "    :    " + user.getScore() + "점");
+
+        /*
+        for(UserEntity user : userList){
+            listModel.addElement(rank + "등  --  " + user.getName() + "    :    " + user.getScore() + "점");
             rank++;
         }
+        */
+
+        userList.forEach(it -> {
+            listModel.addElement(it.toRank(rank));
+            rank++;
+        });
 
         JList<String> rankingList = new JList<>(listModel);
         JScrollPane scrollPane = new JScrollPane(rankingList);

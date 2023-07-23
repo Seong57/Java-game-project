@@ -29,7 +29,7 @@ public class MainFrame extends JFrame{
     public MainFrame(){
         this.setSize(1200, 800);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setTitle("게임 패널 예제");
+        this.setTitle("바퀴벌레 서바이벌!");
         setLocationRelativeTo(null);
 
         this.setLayout(new BorderLayout());
@@ -37,7 +37,7 @@ public class MainFrame extends JFrame{
         // 몬스터 메인 캐릭터 총알 등 실질적 게임이 이루어지는 패널
         gamePlayPanel = new GamePlayPanel(this, userRepository);
         mainMenuPanel = new MainMenuPanel(this,userRepository);
-        endScreenPanel = new EndScreenPanel(this, gamePlayPanel, userRepository);
+        //endScreenPanel = new EndScreenPanel(this, gamePlayPanel, userRepository);
         helpTapPanel = new HelpTapPanel(this, gamePlayPanel, userRepository);
         rankRegisterPanel = new RankRegisterPanel(this, gamePlayPanel.killed, userRepository);
 
@@ -193,7 +193,7 @@ public class MainFrame extends JFrame{
     }
 
     public static void main(String[] args){
-        MainFrame gamePanel = new MainFrame();
+        MainFrame mainFrame = new MainFrame();
     }
 
 
