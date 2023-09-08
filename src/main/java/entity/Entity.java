@@ -4,6 +4,7 @@ public abstract class Entity implements PrimaryKey{
 
     private Long id;
 
+
     @Override
     public Long getId() {
         return id;
