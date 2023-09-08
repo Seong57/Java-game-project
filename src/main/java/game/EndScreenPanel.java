@@ -1,6 +1,6 @@
 package game;
 
-import user.db.UserRepository;
+import db.Repository;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,8 +8,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class EndScreenPanel extends JPanel{
-    private UserRepository userRepository;
+    private Repository repository;
 
+    EndScreenPanel endScreenPanel;
     MainFrame mainFrame;
     GamePlayPanel gamePlayPanel;
     ImageIcon backgroundImg;
@@ -26,12 +27,12 @@ public class EndScreenPanel extends JPanel{
     JButton menuButton;
     JButton rankRegisterButton;
 
-    public EndScreenPanel(MainFrame mainFrame, GamePlayPanel gamePlayPanel, UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public EndScreenPanel(MainFrame mainFrame, GamePlayPanel gamePlayPanel, Repository repository) {
+        this.repository = repository;
         this.gamePlayPanel = gamePlayPanel;
         this.mainFrame = mainFrame;
-        backgroundImg = new ImageIcon("src/main/java/img/배경화면.png");
-        monster = new ImageIcon("src/main/java/img/큰몬스터.png");
+        backgroundImg = new ImageIcon("src/main/java/img/background.png");
+        monster = new ImageIcon("src/main/java/img/monsterbtn.png");
         this.setLayout(new BorderLayout());
 
         // 타이틀

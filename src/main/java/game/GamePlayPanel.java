@@ -1,7 +1,7 @@
 package game;
 
+import db.Repository;
 import sound.Sound;
-import user.db.UserRepository;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 public class GamePlayPanel extends JPanel implements ActionListener{
 
-    private UserRepository userRepository;
+    private Repository repository;
 
 
     MainFrame mainFrame;
@@ -26,21 +26,21 @@ public class GamePlayPanel extends JPanel implements ActionListener{
     //총알 클래스
     Bullet bullet;
     // 총알 이미지
-    ImageIcon bulletImage = new ImageIcon("src/main/java/img/총알.png"); //TODO 이미지 바꾸기
+    ImageIcon bulletImage = new ImageIcon("src/main/java/img/bollet.png"); //TODO 이미지 바꾸기
     // 총알들의 리스트
     ArrayList<Bullet> bullets = new ArrayList<>();
 
 
 
     // 메인 캐릭터
-    ImageIcon image = new ImageIcon("src/main/java/img/메인캐릭터.png");
+    ImageIcon image = new ImageIcon("src/main/java/img/mainchar.png");
     // 배경화면
     ImageIcon backgroundImage;
     // 몬스터
-    ImageIcon bigMonsterImage = new ImageIcon("src/main/java/img/몬스터1.png");  //TODO 이미지 바꾸기
-    ImageIcon bigMonsterImage2 = new ImageIcon("src/main/java/img/몬스터2.png");  //TODO 이미지 바꾸기
-    ImageIcon monsterImage = new ImageIcon("src/main/java/img/작은몬스터1.png");  //TODO 이미지 바꾸기
-    ImageIcon monsterImage2 = new ImageIcon("src/main/java/img/작은몬스터2.png");    //TODO 이미지 바꾸기
+    ImageIcon bigMonsterImage = new ImageIcon("src/main/java/img/largemonster1.png");  //TODO 이미지 바꾸기
+    ImageIcon bigMonsterImage2 = new ImageIcon("src/main/java/img/largemonster2.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage = new ImageIcon("src/main/java/img/smallmonster1.png");  //TODO 이미지 바꾸기
+    ImageIcon monsterImage2 = new ImageIcon("src/main/java/img/smallmonster2.png");    //TODO 이미지 바꾸기
 
 
 
@@ -60,6 +60,8 @@ public class GamePlayPanel extends JPanel implements ActionListener{
     int killed = 0;
     int backgroundWidth;
     int backgroundHeight;
+
+    // img_x, y는 배경화면을 기준으로한 실제 메인 캐릭터의 좌표임.
     int img_x = 1080 / 2 - 61 / 2, img_y = 720 / 2 - 61 / 2;
     int cam_x = 0, cam_y = 0;
     int mouseX;
@@ -104,13 +106,13 @@ public class GamePlayPanel extends JPanel implements ActionListener{
         }
     }
 
-    public GamePlayPanel(MainFrame mainFrame, UserRepository userRepository) {
+    public GamePlayPanel(MainFrame mainFrame, Repository repository) {
 
-        this.userRepository = userRepository;
+        this.repository = repository;
 
-        endScreenPanel = new EndScreenPanel(mainFrame, this, userRepository);
+        endScreenPanel = new EndScreenPanel(mainFrame, this, repository);
 
-        helpTapPanel = new HelpTapPanel(mainFrame, this, userRepository);
+        helpTapPanel = new HelpTapPanel(mainFrame, this, repository);
 
         this.add(helpTapPanel);
         helpTapPanel.setVisible(false);
@@ -121,7 +123,7 @@ public class GamePlayPanel extends JPanel implements ActionListener{
 
         mainCharacter = new MainCharacter(image, 500);
 
-        backgroundImage = new ImageIcon("src/main/java/img/배경화면.png");
+        backgroundImage = new ImageIcon("src/main/java/img/background.png");
 
         backgroundWidth = backgroundImage.getIconWidth();
         backgroundHeight = backgroundImage.getIconHeight();
@@ -319,6 +321,8 @@ public class GamePlayPanel extends JPanel implements ActionListener{
         Graphics2D g2d = (Graphics2D) g;
         g.drawImage(backgroundImage.getImage(), -cam_x, -cam_y, null);
 
+        System.out.println("메인 캐릭터의 중심 좌표(배경화면을 고려한)" + img_x+ ", "+img_y);
+
 
         mainCharacter.moveAndRotateAndDraw(g2d);
         // 몬스터와 메인 캐릭터의 충돌 처리
@@ -422,7 +426,7 @@ public class GamePlayPanel extends JPanel implements ActionListener{
         int hp;
         double angle;
 
-        //캐릭터의 중심 좌표(배경화면 이동을 고려한 배경화면 기준의 실제 좌표)
+        //캐릭터의 중심 좌표(고정된 화면을 기준으로한 좌표임)
         int characterCenterX;
         int characterCenterY;
         int characterDrawX;

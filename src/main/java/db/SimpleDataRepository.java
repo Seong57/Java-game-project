@@ -5,7 +5,7 @@ import entity.Entity;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class SimpleDataRepository<T extends Entity, ID extends Long> implements DataRepository<T, ID>{
+public abstract class SimpleDataRepository<T extends Entity, ID extends Long> implements Repository<T, ID>{
 
     private List<T> dataList = new ArrayList<T>();
 
@@ -18,6 +18,7 @@ public abstract class SimpleDataRepository<T extends Entity, ID extends Long> im
         }
     };
 
+
     //create
 
     @Override
@@ -27,7 +28,6 @@ public abstract class SimpleDataRepository<T extends Entity, ID extends Long> im
             throw new RuntimeException("data is null");
         }
 
-        // 유니크 아이디
         data.setId(index);
 
         dataList.add(data);
@@ -43,4 +43,5 @@ public abstract class SimpleDataRepository<T extends Entity, ID extends Long> im
                 .sorted(sort)
                 .collect(Collectors.toList());
     }
+
 }

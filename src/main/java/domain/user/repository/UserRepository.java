@@ -1,7 +1,7 @@
-package user.db;
+package domain.user.repository;
 
 import db.SimpleDataRepository;
-import user.model.UserEntity;
+import domain.user.UserEntity;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -10,17 +10,17 @@ import java.util.stream.Collectors;
 
 public class UserRepository extends SimpleDataRepository<UserEntity, Long> {
 
-    private Comparator<UserEntity> sort = new Comparator<UserEntity>() {
+    private Comparator<UserEntity> sortByScoreDesc = new Comparator<UserEntity>() {
         @Override
         public int compare(UserEntity o1, UserEntity o2) {
             return Integer.compare(o2.getScore(), o1.getScore());
         }
     };
 
-    public ArrayList<UserEntity> findAllScoreGreaterThen(){
+    public List<UserEntity> findAllByScoreGreaterThen(){
         return (ArrayList<UserEntity>) this.findAll()
                 .stream()
-                .sorted(sort)
+                .sorted(sortByScoreDesc)
                 .collect(Collectors.toList());
     }
 

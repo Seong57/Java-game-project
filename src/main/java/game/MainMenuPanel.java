@@ -1,20 +1,18 @@
 package game;
 
-import user.db.UserRepository;
-import user.model.UserEntity;
+import db.Repository;
+import domain.user.UserEntity;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainMenuPanel extends JPanel {
 
-    private final UserRepository userRepository;
+    private final Repository repository;
 
     ImageIcon backgroundImg;
     ImageIcon monster;
@@ -29,12 +27,12 @@ public class MainMenuPanel extends JPanel {
     JButton exitButton;
     JButton rankingButton;
 
-    public MainMenuPanel(MainFrame mainFrame, UserRepository userRepository) {
+    public MainMenuPanel(MainFrame mainFrame, Repository repository) {
 
-        this.userRepository = userRepository;
+        this.repository = repository;
 
-        backgroundImg = new ImageIcon("src/main/java/img/배경화면.png");
-        monster = new ImageIcon("src/main/java/img/큰몬스터.png");
+        backgroundImg = new ImageIcon("src/main/java/img/background.png");
+        monster = new ImageIcon("src/main/java/img/monsterbtn.png");
         this.setLayout(new BorderLayout());
 
         // 타이틀
@@ -120,7 +118,7 @@ public class MainMenuPanel extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 //랭킹 보여주기
                 List<UserEntity> userList = new ArrayList<UserEntity>();
-                userList = userRepository.findAllScoreGreaterThen();
+                userList = repository.findAllByScoreGreaterThen();
 
                 RankingDialog rankingDialog = new RankingDialog(mainFrame, userList);
                 rankingDialog.setVisible(true);

@@ -1,7 +1,7 @@
 package game;
 
-import user.db.UserRepository;
-import user.model.UserEntity;
+import db.Repository;
+import domain.user.UserEntity;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,7 +12,7 @@ import java.awt.event.MouseEvent;
 
 public class RankRegisterPanel extends JPanel{
 
-    private final UserRepository userRepository;
+    private final Repository repository;
 
     MainFrame mainFrame;
     GamePlayPanel gamePlayPanel;
@@ -33,15 +33,15 @@ public class RankRegisterPanel extends JPanel{
 
     JTextField nameField;
 
-    public RankRegisterPanel(MainFrame mainFrame, int killed, UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public RankRegisterPanel(MainFrame mainFrame, int killed, Repository repository) {
+        this.repository = repository;
         this.killed = killed;
 
         this.gamePlayPanel = gamePlayPanel;
         this.mainFrame = mainFrame;
 
-        backgroundImg = new ImageIcon("src/main/java/img/배경화면.png");
-        monster = new ImageIcon("src/main/java/img/큰몬스터.png");
+        backgroundImg = new ImageIcon("src/main/java/img/background.png");
+        monster = new ImageIcon("src/main/java/img/monsterbtn.png");
         this.setLayout(new BorderLayout());
 
         // 이름 필드
@@ -108,7 +108,7 @@ public class RankRegisterPanel extends JPanel{
         menuButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mainFrame.menu(userRepository);
+                mainFrame.menu(repository);
             }
         });
 
@@ -140,10 +140,9 @@ public class RankRegisterPanel extends JPanel{
                 user.setName(userName);
                 user.setScore(killed);
 
-                userRepository.save(user);
+                repository.save(user);
 
-                System.out.println(userRepository.findAll().get(0).getName());
-                mainFrame.menu(userRepository);
+                mainFrame.menu(repository);
             }
         });
 

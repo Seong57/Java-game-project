@@ -1,7 +1,6 @@
 package db;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface Repository<T, ID> {
 
@@ -9,4 +8,7 @@ public interface Repository<T, ID> {
     T save(T data);
     //read
     List<T> findAll();
+
+    List<T> findAllByScoreGreaterThen();
+
 }

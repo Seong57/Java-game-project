@@ -1,4 +1,4 @@
-package user.model;
+package domain.user;
 
 import entity.Entity;
 

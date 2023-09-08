@@ -1,10 +1,8 @@
 package game;
 
-import user.model.UserEntity;
+import domain.user.UserEntity;
 
 import javax.swing.*;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class RankingDialog extends JDialog {

@@ -1,6 +1,6 @@
 package game;
 
-import user.db.UserRepository;
+import db.Repository;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,10 +9,10 @@ import java.awt.event.ActionListener;
 
 public class HelpTapPanel extends JPanel {
 
-    private UserRepository userRepository;
+    private Repository repository;
     MainFrame mainFrame;
     GamePlayPanel gamePlayPanel;
-    ImageIcon monster = new ImageIcon("src/main/java/img/큰몬스터.png");
+    ImageIcon monster = new ImageIcon("src/main/java/img/monsterbtn.png");
 
     float alpha = 1.0f;
 
@@ -25,8 +25,8 @@ public class HelpTapPanel extends JPanel {
     JButton exitButton;
 
 
-    public HelpTapPanel(MainFrame mainFrame, GamePlayPanel gamePlayPanel, UserRepository userRepository){
-        this.userRepository = userRepository;
+    public HelpTapPanel(MainFrame mainFrame, GamePlayPanel gamePlayPanel, Repository repository){
+        this.repository = repository;
         this.mainFrame = mainFrame;
         this.gamePlayPanel = gamePlayPanel;
 
